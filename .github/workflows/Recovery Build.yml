@@ -14,7 +14,7 @@ on:
       DEVICE_TREE_URL:
         description: 'DEVICE_TREE_URL'
         required: true
-        default: 'https://github.com/Topdog3518/TWRP_Realme_RMX2117-Narzo-30-Pro-5G'
+        default: 'https://github.com/Powerfull11/android_device_realme_RMX2117-android-11.git'
       DEVICE_TREE_BRANCH:
         description: 'DEVICE_TREE_BRANCH'
         required: true
