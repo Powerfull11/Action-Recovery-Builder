@@ -107,7 +107,7 @@ jobs:
         echo "::set-output name=pwd::$(pwd)"
         git config --global user.name "Powerfull11"
         git config --global user.email "skfoxyforce@gmail.com"
-        repo init --depth=1 -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-11 --groups=all,-notdefault,-device,-darwin,-x86,-mips
+        repo init --depth=1 -u ${{ github.event.inputs.MANIFEST_URL }} -b ${{ github.event.inputs.MANIFEST_BRANCH }} --groups=all,-notdefault,-device,-darwin,-x86,-mips
       id: pwd
           
     - name: Repo Sync
