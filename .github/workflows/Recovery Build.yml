@@ -152,6 +152,7 @@ jobs:
       if: ${{ github.event.inputs.MANIFEST_BRANCH == 'twrp-11' }}
       run: |
         source build/envsetup.sh
+        repopick 5405 5540
       working-directory: ${{ steps.pwd.outputs.pwd }}
 
     - name: Building recovery
