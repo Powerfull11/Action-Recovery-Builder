@@ -3,14 +3,14 @@ name: Recovery Build
 on:
   workflow_dispatch:
     inputs:
-      MANIFEST_URL:
-        description: 'MANIFEST_URL (if using SSH keys, use git@github.com:repo URL format)'
-        required: true
-        default: 'https://github.com/Powerfull11/platform_manifest_twrp_aosp.git'
-      MANIFEST_BRANCH:
-        description: 'MANIFEST_BRANCH'
+      Twrp_Branch:
+        description: 'which tree you wanna use'
         required: true
         default: 'twrp-11'
+      Ofox_Version:
+        description: 'which version of ofox you wanna build'
+        required: true
+        default: '11'
       DEVICE_TREE_URL:
         description: 'DEVICE_TREE_URL'
         required: true
@@ -18,17 +18,11 @@ on:
       DEVICE_TREE_BRANCH:
         description: 'DEVICE_TREE_BRANCH'
         required: true
-        default: 'android-11'
+        default: 'RMX2117_ofox'
       DEVICE_PATH:
         description: 'DEVICE_PATH'
         required: true
-        default: 'device/realme/RMX2117'
-      COMMON_TREE_URL:
-        description: 'COMMON_TREE_URL (if no common tree, leave blank)'
-        required: false
-      COMMON_PATH:
-        description: 'COMMON_PATH (if no common tree, leave blank)'
-        required: false
+        default: 'device/Realme/RMX2117'
       DEVICE_NAME:
         description: 'DEVICE_NAME'
         required: true
@@ -100,63 +94,38 @@ jobs:
         chmod a+x ~/bin/repo
         sudo ln -sf ~/bin/repo /usr/bin/repo
       
-    - name: Initialize repo
+    - name: Initialize repo and sync
       run: |
         mkdir workspace
         cd workspace
         echo "::set-output name=pwd::$(pwd)"
         git config --global user.name "Powerfull11"
         git config --global user.email "skfoxyforce@gmail.com"
-        repo init --depth=1 -u ${{ github.event.inputs.MANIFEST_URL }} -b ${{ github.event.inputs.MANIFEST_BRANCH }} --groups=all,-notdefault,-device,-darwin,-x86,-mips
+        cd ..
+        git clone https://gitlab.com/OrangeFox/sync.git
+        cd sync
+        ./orangefox_sync.sh --branch ${{ github.event.inputs.Ofox_Version }} --path ~/workspace/${{ github.event.inputs.Twrp_Branch }}
       id: pwd
           
-    - name: Repo Sync
-      run: |
-        repo sync --force-sync --no-clone-bundle --no-tags -j$(nproc --all)
-      working-directory: workspace
-      
     - name: Clone device tree
       run: |
+        cd ~/workspace/${{ github.event.inputs.Twrp_Branch }}
         git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.DEVICE_PATH }}
       working-directory: ${{ steps.pwd.outputs.pwd }}
 
-    - name: Clone common tree
-      if: |
-        github.event.inputs.COMMON_TREE_URL != null
-        && github.event.inputs.COMMON_PATH != null
-      run: |
-        git clone ${{ github.event.inputs.COMMON_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.COMMON_PATH }}
-      working-directory: ${{ steps.pwd.outputs.pwd }}
+   
+    
 
-    - name: Check Build Tree
-      uses: haya14busa/action-cond@v1
-      id: buildtree
-      with:
-        cond: ${{ github.event.inputs.MANIFEST_BRANCH == 'twrp-11' || github.event.inputs.MANIFEST_BRANCH == 'twrp-12.1' }}
-        if_true: twrp
-        if_false: omni
-
-    - name: Sync Device Dependencies
-      run: |
-        bash ${GITHUB_WORKSPACE}/scripts/convert.sh ${{ github.event.inputs.DEVICE_PATH }}/${{ steps.buildtree.outputs.value }}.dependencies
-        repo sync -j$(nproc --all)
-      working-directory: ${{ steps.pwd.outputs.pwd }}
-      continue-on-error: true
+    
 
     - name: Set Swap Space
       uses: pierotofy/set-swap-space@master
       with:
         swap-size-gb: 12
 
-    - name: Check Build Branch
-      if: ${{ github.event.inputs.MANIFEST_BRANCH == 'twrp-11' }}
-      run: |
-        source build/envsetup.sh
-        repopick 5405 5540
-      working-directory: ${{ steps.pwd.outputs.pwd }}
-
     - name: Building recovery
       run: |
+        cd ~/workspace/${{ github.event.inputs.Twrp_Branch }}
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && make clean && make ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
@@ -165,11 +134,11 @@ jobs:
     - name: Upload to Release
       uses: softprops/action-gh-release@v1
       with:
-        files: workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/${{ github.event.inputs.BUILD_TARGET }}.img
+        files: /workspace/${{ github.event.inputs.Twrp_Branch }}/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/${{ github.event.inputs.BUILD_TARGET }}.img
         name: ${{ github.event.inputs.DEVICE_NAME }}-${{ github.run_id }}
         tag_name: ${{ github.run_id }}
         body: |
-          Manifest: ${{ github.event.inputs.MANIFEST_BRANCH }}
+          Manifest: Shrp for ${{ github.event.inputs.Twrp_Branch }}
           Device: ${{ github.event.inputs.DEVICE_NAME }}
           Target: ${{ github.event.inputs.BUILD_TARGET }}.img
       env:
