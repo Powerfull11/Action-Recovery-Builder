@@ -10,7 +10,7 @@ on:
       Ofox_Version:
         description: 'which version of ofox you wanna build'
         required: true
-        default: '11'
+        default: '11.0'
       DEVICE_TREE_URL:
         description: 'DEVICE_TREE_URL'
         required: true
@@ -18,7 +18,7 @@ on:
       DEVICE_TREE_BRANCH:
         description: 'DEVICE_TREE_BRANCH'
         required: true
-        default: 'RMX2117_ofox'
+        default: 'android-11'
       DEVICE_PATH:
         description: 'DEVICE_PATH'
         required: true
