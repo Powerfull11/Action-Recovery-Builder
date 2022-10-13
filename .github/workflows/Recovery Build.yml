@@ -105,6 +105,8 @@ jobs:
         git clone https://gitlab.com/OrangeFox/sync.git
         cd sync
         ./orangefox_sync.sh --branch ${{ github.event.inputs.Ofox_Version }} --path ~/workspace/${{ github.event.inputs.Twrp_Branch }}
+        cd ..
+        git clone https://gitlab.com/OrangeFox/misc/theme.git bootable/recovery/gui/theme
       id: pwd
           
     - name: Clone device tree
