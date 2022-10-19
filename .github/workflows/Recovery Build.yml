@@ -104,7 +104,6 @@ jobs:
     - name: Initialize repo and sync
       run: |
         mkdir workspace
-        echo "::set-output name=pwd::$(pwd)"
         git config --global user.name "Powerfull11"
         git config --global user.email "skfoxyforce@gmail.com"
         git clone ${{ github.event.inputs.MANIFEST_URL }}
