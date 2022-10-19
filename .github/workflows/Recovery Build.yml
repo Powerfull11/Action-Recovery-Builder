@@ -72,7 +72,7 @@ jobs:
     - name: Prepare the environment
       run: |
         cd ~
-        sudo apt update
+        sudo apt update --fix-missing
         sudo apt -y upgrade
         sudo apt -y install git aria2 gperf gcc-multilib gcc-10-multilib g++-multilib g++-10-multilib libc6-dev lib32ncurses5-dev x11proto-core-dev libx11-dev tree lib32z-dev libgl1-mesa-dev libxml2-utils xsltproc bc ccache lib32readline-dev lib32z1-dev liblz4-tool libncurses5-dev libsdl1.2-dev libwxgtk3.0-gtk3-dev libxml2 lzop pngcrush schedtool squashfs-tools imagemagick libbz2-dev lzma ncftp qemu-user-static libstdc++-10-dev python2 
 
@@ -110,20 +110,12 @@ jobs:
         git config --global user.email "skfoxyforce@gmail.com"
         git clone ${{ github.event.inputs.MANIFEST_URL }}
         cd sync
-        ./orangefox_sync.sh -b ${{ github.event.inputs.MANIFEST_BRANCH }} --path ~/fox_11.0
+        ./orangefox_sync.sh -b ${{ github.event.inputs.MANIFEST_BRANCH }} --path ~/workspace
       working-directory: workspace
       
     - name: Clone device tree
       run: |
-        git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.DEVICE_PATH }}
-      working-directory: ${{ steps.pwd.outputs.pwd }}
-
-    - name: Clone common tree
-      if: |
-        github.event.inputs.COMMON_TREE_URL != null
-        && github.event.inputs.COMMON_PATH != null
-      run: |
-        git clone ${{ github.event.inputs.COMMON_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.COMMON_PATH }}
+        git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ~/workspace/${{ github.event.inputs.DEVICE_PATH }}
       working-directory: ${{ steps.pwd.outputs.pwd }}
 
     - name: Check Build Tree
@@ -150,11 +142,11 @@ jobs:
       if: ${{ github.event.inputs.MANIFEST_BRANCH == '12.1' }}
       run: |
         source build/envsetup.sh
-        repopick 5405 5540
       working-directory: ${{ steps.pwd.outputs.pwd }}
 
     - name: Building recovery
       run: |
+        cd ~/workspace
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && make clean && make ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
