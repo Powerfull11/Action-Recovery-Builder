@@ -108,7 +108,7 @@ jobs:
         echo "::set-output name=pwd::$(pwd)"
         git config --global user.name "Powerfull11"
         git config --global user.email "skfoxyforce@gmail.com"
-        repo init --depth=1 -u ${{ github.event.inputs.MANIFEST_URL }}
+        git clone ${{ github.event.inputs.MANIFEST_URL }}
         cd sync
         ./orangefox_sync.sh -b ${{ github.event.inputs.MANIFEST_BRANCH }} --path ~/fox_11.0
       working-directory: workspace
