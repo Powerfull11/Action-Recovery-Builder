@@ -110,12 +110,12 @@ jobs:
         git config --global user.email "skfoxyforce@gmail.com"
         git clone ${{ github.event.inputs.MANIFEST_URL }}
         cd sync
-        ./orangefox_sync.sh -b ${{ github.event.inputs.MANIFEST_BRANCH }} --path ~/workspace
+        ./orangefox_sync.sh -b ${{ github.event.inputs.MANIFEST_BRANCH }} --path workspace
       working-directory: workspace
       
     - name: Clone device tree
       run: |
-        git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ~/workspace/${{ github.event.inputs.DEVICE_PATH }}
+        git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} workspace/${{ github.event.inputs.DEVICE_PATH }}
       working-directory: ${{ steps.pwd.outputs.pwd }}
 
     - name: Check Build Tree
@@ -146,7 +146,7 @@ jobs:
 
     - name: Building recovery
       run: |
-        cd ~/workspace
+        cd workspace
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && make clean && make ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
