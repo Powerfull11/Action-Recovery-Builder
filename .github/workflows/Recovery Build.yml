@@ -110,7 +110,7 @@ jobs:
         git config --global user.email "skfoxyforce@gmail.com"
         git clone ${{ github.event.inputs.MANIFEST_URL }}
         cd sync
-        ./orangefox_sync.sh -b ${{ github.event.inputs.MANIFEST_BRANCH }} --path workspace
+        ./orangefox_sync.sh --branch ${{ github.event.inputs.MANIFEST_BRANCH }} --path workspace
       working-directory: workspace
       
     - name: Clone device tree
