@@ -153,10 +153,6 @@ jobs:
       run: |
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
-        export LC_ALL="C"
-        export FOX_BUILD_TYPE="stable"
-        export FOX_USE_TWRP_RECOVERY_IMAGE_BUILDER=1
-        export OF_MAINTAINER="Powerfull11"
         lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && make clean && make ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
       working-directory: ${{ steps.pwd.outputs.pwd }}
 
