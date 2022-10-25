@@ -7,10 +7,6 @@ on:
         description: 'MIN_MANIFEST (if using SSH keys, use git@github.com:repo URL format)'
         required: true
         default: 'https://github.com/Powerfull11/platform_manifest_twrp_aosp.git'
-      TWRP_BRANCH:
-        description: 'TWRP_BRANCH'
-        required: true
-        default: 'twrp-11'
       DEVICE_TREE_URL:
         description: 'DEVICE_TREE_URL'
         required: true
@@ -50,7 +46,6 @@ jobs:
       run: |
         echo "::group::User Environment Variables"
         echo "Min Manifest: ${{ github.event.inputs.MIN_MANIFEST }}"
-        echo "Twrp Branch: ${{ github.event.inputs.TWRP_BRANCH }}"
         echo "Device Tree URL: ${{ github.event.inputs.DEVICE_TREE_URL }}"
         echo "Fox def Branch: ${{ github.event.inputs.FOX_DEF_BRANCH }}"
         echo "Device Path: ${{ github.event.inputs.DEVICE_PATH }}"
@@ -106,7 +101,7 @@ jobs:
         echo "::set-output name=pwd::$(pwd)"
         git config --global user.name "Powerfull11"
         git config --global user.email "skfoxyforce@gmail.com"
-        repo init --depth=1 -u ${{ github.event.inputs.MIN_MANIFEST }} -b ${{ github.event.inputs.TWRP_BRANCH }}
+        repo init --depth=1 -u ${{ github.event.inputs.MIN_MANIFEST }} -b ${{ github.event.inputs.FOX_DEF_BRANCH }}
       id: pwd
           
     - name: Repo Sync
@@ -138,7 +133,7 @@ jobs:
       uses: haya14busa/action-cond@v1
       id: buildtree
       with:
-        cond: ${{ github.event.inputs.TWRP_BRANCH == 'twrp-11' || github.event.inputs.TWRP_BRANCH == 'twrp-12.1' }}
+        cond: ${{ github.event.inputs.FOX_DEF_BRANCH == 'fox_11.0' || github.event.inputs.FOX_DEF_BRANCH == 'fox_12.1' }}
         if_true: twrp
         if_false: omni
 
@@ -154,27 +149,25 @@ jobs:
       with:
         swap-size-gb: 12
 
-    - name: Check Build Branch
-      if: ${{ github.event.inputs.TWRP_BRANCH == 'twrp-12.1' }}
-      run: |
-        source build/envsetup.sh
-      working-directory: ${{ steps.pwd.outputs.pwd }}
-
     - name: Building recovery
       run: |
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
+        export LC_ALL="C"
+        export FOX_BUILD_TYPE="stable"
+        export FOX_USE_TWRP_RECOVERY_IMAGE_BUILDER=1
+        export OF_MAINTAINER="Powerfull11"
         lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && make clean && make ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
       working-directory: ${{ steps.pwd.outputs.pwd }}
 
     - name: Upload to Release
       uses: softprops/action-gh-release@v1
       with:
-        files: workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/${{ github.event.inputs.BUILD_TARGET }}.img
+        files: fox11/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/${{ github.event.inputs.BUILD_TARGET }}.img
         name: ${{ github.event.inputs.DEVICE_NAME }}-${{ github.run_id }}
         tag_name: ${{ github.run_id }}
         body: |
-          Manifest: ${{ github.event.inputs.TWRP_BRANCH }}
+          Manifest: ${{ github.event.inputs.FOX_DEF_BRANCH }}
           Device: ${{ github.event.inputs.DEVICE_NAME }}
           Target: ${{ github.event.inputs.BUILD_TARGET }}.img
       env:
