@@ -117,7 +117,7 @@ jobs:
     - name: Patch minimal manifest 
       run: |
         cd build
-        patch -p1 < ${GITHUB_WORKSPACE}/patches/patch-manifest-$FOX_DEF_BRANCH.diff
+        patch -p1 < /patches/patch-manifest-$FOX_DEF_BRANCH.diff
       working-directory: ${{ steps.pwd.outputs.pwd }}
       
     - name: Clone vendor tree
