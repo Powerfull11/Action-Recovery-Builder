@@ -3,32 +3,30 @@ name: Recovery Build
 on:
   workflow_dispatch:
     inputs:
-      MANIFEST_URL:
-        description: 'MANIFEST_URL (if using SSH keys, use git@github.com:repo URL format)'
+      MIN_MANIFEST:
+        description: 'MIN_MANIFEST (if using SSH keys, use git@github.com:repo URL format)'
         required: true
-        default: 'https://github.com/Powerfull11/sync.git'
-      MANIFEST_BRANCH:
-        description: 'MANIFEST_BRANCH'
+        default: 'https://github.com/Powerfull11/platform_manifest_twrp_aosp.git'
+      TWRP_BRANCH:
+        description: 'TWRP_BRANCH'
         required: true
-        default: '11.0'
+        default: 'twrp-11'
       DEVICE_TREE_URL:
         description: 'DEVICE_TREE_URL'
         required: true
         default: 'https://github.com/Powerfull11/android_device_realme_RMX2117-android-11.git'
-      DEVICE_TREE_BRANCH:
-        description: 'DEVICE_TREE_BRANCH'
+      FOX_DEF_BRANCH:
+        description: 'FOX_DEF_BRANCH'
         required: true
         default: 'fox_11.0'
       DEVICE_PATH:
         description: 'DEVICE_PATH'
         required: true
         default: 'device/realme/RMX2117'
-      COMMON_TREE_URL:
-        description: 'COMMON_TREE_URL (if no common tree, leave blank)'
-        required: false
-      COMMON_PATH:
-        description: 'COMMON_PATH (if no common tree, leave blank)'
-        required: false
+      VENDOR_TREE_URL:
+        description: 'VENDOR_TREE_URL (if no vendor tree, leave blank)'
+        required: true
+        default: 'https://gitlab.com/OrangeFox/vendor/recovery.git'
       DEVICE_NAME:
         description: 'DEVICE_NAME'
         required: true
@@ -41,7 +39,19 @@ on:
         description: 'BUILD_TARGET'
         required: true
         default: 'recovery'
-
+      BASE_DIR:
+        description: 'BASE_DIR'
+        required: true
+        default: '$PWD'
+      MANIFEST_DIR:
+        description: 'MANIFEST_DIR'
+        required: true
+        default: '$BASE_DIR/$FOX_DEF_BRANCH'
+      PATCH_FILE:
+        description: 'PATCH_FILE'
+        required: true
+        default: '${GITHUB_WORKSPACE}/patches/patch-manifest-$FOX_DEF_BRANCH.diff'   
+        
 jobs:
   build:
     if: github.event.repository.owner.id == github.event.sender.id
@@ -51,14 +61,18 @@ jobs:
     - name: Display Run Parameters
       run: |
         echo "::group::User Environment Variables"
-        echo "Manifest URL: ${{ github.event.inputs.MANIFEST_URL }}"
-        echo "Manifest Branch: ${{ github.event.inputs.MANIFEST_BRANCH }}"
+        echo "Min Manifest: ${{ github.event.inputs.MIN_MANIFEST }}"
+        echo "Twrp Branch: ${{ github.event.inputs.TWRP_BRANCH }}"
         echo "Device Tree URL: ${{ github.event.inputs.DEVICE_TREE_URL }}"
-        echo "Device Tree Branch: ${{ github.event.inputs.DEVICE_TREE_BRANCH }}"
+        echo "Fox def Branch: ${{ github.event.inputs.FOX_DEF_BRANCH }}"
         echo "Device Path: ${{ github.event.inputs.DEVICE_PATH }}"
+        echo "Vendor Tree URL: ${{ github.event.inputs.VENDOR_TREE_URL }}"
         echo "Device Name: ${{ github.event.inputs.DEVICE_NAME }}"
         echo "Makefile Name: ${{ github.event.inputs.MAKEFILE_NAME }}"
         echo "Build Target: ${{ github.event.inputs.BUILD_TARGET }}.img"
+        echo "Base dir: ${{ github.event.inputs.BASE_DIR }}"
+        echo "Manifest dir: ${{ github.event.inputs.MANIFEST_DIR }}"
+        echo "Patch file: ${{ github.event.inputs.PATCH_FILE }}
         echo "::endgroup::"
  
     # You might want to Checkout your repo first, but not mandatory
@@ -68,18 +82,21 @@ jobs:
     - name: Cleanup
       uses: rokibhasansagar/slimhub_actions@main
       # That's it! Now use your normal steps
-      
+
     - name: Prepare the environment
       run: |
-        cd ~ echo $OLDPWD
-        sudo apt install git aria2 -y
-        git clone https://gitlab.com/OrangeFox/misc/scripts
-        cd scripts
-        sudo bash setup/android_build_env.sh
-        sudo bash setup/install_android_sdk.sh
-        
+        sudo apt update
+        sudo apt -y upgrade
+        sudo apt -y install gperf gcc-multilib gcc-10-multilib g++-multilib g++-10-multilib libc6-dev lib32ncurses5-dev x11proto-core-dev libx11-dev tree lib32z-dev libgl1-mesa-dev libxml2-utils xsltproc bc ccache lib32readline-dev lib32z1-dev liblz4-tool libncurses5-dev libsdl1.2-dev libwxgtk3.0-gtk3-dev libxml2 lzop pngcrush schedtool squashfs-tools imagemagick libbz2-dev lzma ncftp qemu-user-static libstdc++-10-dev python
+
+    - name: Install OpenJDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '8'
+
     - name: Setup SSH Keys
-      if: ${{ startsWith(github.event.inputs.MANIFEST_URL, 'git@github.com') }}
+      if: ${{ startsWith(github.event.inputs.MIN_MANIFEST, 'git@github.com') }}
       uses: webfactory/ssh-agent@v0.5.4
       with:
           ssh-private-key: |
@@ -90,28 +107,53 @@ jobs:
         echo "::set-output name=date::$(date +%F)"
       id: var
       
-    - name: Initialize repo and sync
+    - name: Install repo
       run: |
-        mkdir workspace
-        cd workspace
+        mkdir ~/bin
+        curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+        chmod a+x ~/bin/repo
+        sudo ln -sf ~/bin/repo /usr/bin/repo
+      
+    - name: Initialize repo
+      run: |
+        mkdir -p $MANIFEST_DIR
+        cd $MANIFEST_DIR
+        echo "::set-output name=pwd::$(pwd)"
         git config --global user.name "Powerfull11"
         git config --global user.email "skfoxyforce@gmail.com"
-        git clone ${{ github.event.inputs.MANIFEST_URL }}
-        cd sync
-        ./orangefox_sync.sh --branch ${{ github.event.inputs.MANIFEST_BRANCH }} --path ~/fox_11.0
-      working-directory: workspace
+        repo init --depth=1 -u ${{ github.event.inputs.MIN_MANIFEST }} -b ${{ github.event.inputs.TWRP_BRANCH }}
+      id: pwd
+          
+    - name: Repo Sync
+      run: |
+        repo sync -j$(nproc --all) --force-sync
+      working-directory: $MANIFEST_DIR
+   
+    - name: Patch minimal manifest 
+      run: |
+        cd $MANIFEST_DIR/build
+        patch -p1 < $PATCH_FILE
+      working-directory: ${{ steps.pwd.outputs.pwd }}
+      
+    - name: Clone vendor tree
+      run: |
+        rm -rf $MANIFEST_DIR/vendor/recovery
+        mkdir -p $MANIFEST_DIR/vendor
+        cd $MANIFEST_DIR/vendor
+        git clone ${{ github.event.inputs.VENDOR_TREE_URL }} -b ${{ github.event.inputs.FOX_DEF_BRANCH }} recovery
+      working-directory: ${{ steps.pwd.outputs.pwd }}
       
     - name: Clone device tree
       run: |
-        cd fox_11.0
-        git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} workspace/${{ github.event.inputs.DEVICE_PATH }}
+        git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.FOX_DEF_BRANCH }} ./${{ github.event.inputs.DEVICE_PATH }}
       working-directory: ${{ steps.pwd.outputs.pwd }}
+      
 
     - name: Check Build Tree
       uses: haya14busa/action-cond@v1
       id: buildtree
       with:
-        cond: ${{ github.event.inputs.MANIFEST_BRANCH == '11.0' || github.event.inputs.MANIFEST_BRANCH == '12.1' }}
+        cond: ${{ github.event.inputs.TWRP_BRANCH == 'twrp-11' || github.event.inputs.TWRP_BRANCH == 'twrp-12.1' }}
         if_true: twrp
         if_false: omni
 
@@ -128,14 +170,13 @@ jobs:
         swap-size-gb: 12
 
     - name: Check Build Branch
-      if: ${{ github.event.inputs.MANIFEST_BRANCH == '12.1' }}
+      if: ${{ github.event.inputs.TWRP_BRANCH == 'twrp-12.1' }}
       run: |
         source build/envsetup.sh
       working-directory: ${{ steps.pwd.outputs.pwd }}
 
     - name: Building recovery
       run: |
-        cd workspace
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && make clean && make ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
@@ -148,7 +189,7 @@ jobs:
         name: ${{ github.event.inputs.DEVICE_NAME }}-${{ github.run_id }}
         tag_name: ${{ github.run_id }}
         body: |
-          Manifest: ${{ github.event.inputs.MANIFEST_BRANCH }}
+          Manifest: ${{ github.event.inputs.TWRP_BRANCH }}
           Device: ${{ github.event.inputs.DEVICE_NAME }}
           Target: ${{ github.event.inputs.BUILD_TARGET }}.img
       env:
