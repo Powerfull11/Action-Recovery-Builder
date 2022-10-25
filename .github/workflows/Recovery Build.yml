@@ -39,18 +39,6 @@ on:
         description: 'BUILD_TARGET'
         required: true
         default: 'recovery'
-      BASE_DIR:
-        description: 'BASE_DIR'
-        required: true
-        default: '$PWD'
-      MANIFEST_DIR:
-        description: 'MANIFEST_DIR'
-        required: true
-        default: '$BASE_DIR/$FOX_DEF_BRANCH'
-      PATCH_FILE:
-        description: 'PATCH_FILE'
-        required: true
-        default: '${GITHUB_WORKSPACE}/patches/patch-manifest-$FOX_DEF_BRANCH.diff'   
         
 jobs:
   build:
@@ -70,9 +58,6 @@ jobs:
         echo "Device Name: ${{ github.event.inputs.DEVICE_NAME }}"
         echo "Makefile Name: ${{ github.event.inputs.MAKEFILE_NAME }}"
         echo "Build Target: ${{ github.event.inputs.BUILD_TARGET }}.img"
-        echo "Base dir: ${{ github.event.inputs.BASE_DIR }}"
-        echo "Manifest dir: ${{ github.event.inputs.MANIFEST_DIR }}"
-        echo "Patch file: ${{ github.event.inputs.PATCH_FILE }}
         echo "::endgroup::"
  
     # You might want to Checkout your repo first, but not mandatory
@@ -116,8 +101,8 @@ jobs:
       
     - name: Initialize repo
       run: |
-        mkdir -p $MANIFEST_DIR
-        cd $MANIFEST_DIR
+        mkdir -p fox11
+        cd fox11
         echo "::set-output name=pwd::$(pwd)"
         git config --global user.name "Powerfull11"
         git config --global user.email "skfoxyforce@gmail.com"
@@ -127,19 +112,19 @@ jobs:
     - name: Repo Sync
       run: |
         repo sync -j$(nproc --all) --force-sync
-      working-directory: $MANIFEST_DIR
+      working-directory: fox11
    
     - name: Patch minimal manifest 
       run: |
-        cd $MANIFEST_DIR/build
-        patch -p1 < $PATCH_FILE
+        cd fox11/build
+        patch -p1 < ${GITHUB_WORKSPACE}/patches/patch-manifest-$FOX_DEF_BRANCH.diff
       working-directory: ${{ steps.pwd.outputs.pwd }}
       
     - name: Clone vendor tree
       run: |
-        rm -rf $MANIFEST_DIR/vendor/recovery
-        mkdir -p $MANIFEST_DIR/vendor
-        cd $MANIFEST_DIR/vendor
+        rm -rf fox11/vendor/recovery
+        mkdir -p fox11/vendor
+        cd fox11/vendor
         git clone ${{ github.event.inputs.VENDOR_TREE_URL }} -b ${{ github.event.inputs.FOX_DEF_BRANCH }} recovery
       working-directory: ${{ steps.pwd.outputs.pwd }}
       
