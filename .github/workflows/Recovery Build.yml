@@ -116,7 +116,7 @@ jobs:
    
     - name: Patch minimal manifest 
       run: |
-        cd fox11/build
+        cd build
         patch -p1 < ${GITHUB_WORKSPACE}/patches/patch-manifest-$FOX_DEF_BRANCH.diff
       working-directory: ${{ steps.pwd.outputs.pwd }}
       
