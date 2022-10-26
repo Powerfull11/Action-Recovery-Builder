@@ -115,6 +115,11 @@ jobs:
         patch -p1 < ${GITHUB_WORKSPACE}/patches/patch-manifest-${{ github.event.inputs.FOX_DEF_BRANCH }}.diff
       working-directory: ${{ steps.pwd.outputs.pwd }}
       
+    - name: Clone Ofox theme
+      run: |
+        git clone https://gitlab.com/OrangeFox/misc/theme.git bootable/recovery/gui/theme
+      working-directory: ${{ steps.pwd.outputs.pwd }} 
+      
     - name: Clone vendor tree
       run: |
         rm -rf fox11/vendor/recovery
@@ -136,13 +141,6 @@ jobs:
         cond: ${{ github.event.inputs.FOX_DEF_BRANCH == 'fox_11.0' || github.event.inputs.FOX_DEF_BRANCH == 'fox_12.1' }}
         if_true: twrp
         if_false: omni
-
-    - name: Sync Device Dependencies
-      run: |
-        bash ${GITHUB_WORKSPACE}/scripts/convert.sh ${{ github.event.inputs.DEVICE_PATH }}/${{ steps.buildtree.outputs.value }}.dependencies
-        repo sync -j$(nproc --all)
-      working-directory: ${{ steps.pwd.outputs.pwd }}
-      continue-on-error: true
 
     - name: Set Swap Space
       uses: pierotofy/set-swap-space@master
